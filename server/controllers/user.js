@@ -1,6 +1,11 @@
 let user = require('../models/user')
 var mongoose = require('mongoose');
-//-------------------------------------------------------- getdata
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+var salt = bcrypt.genSaltSync(10);
+require('dotenv').config()
+
+//-------------------------------------------------------- getUser(v)
 const getUser = (req,res) => {
   user.find().then((user)=>{
     res.send(user)
@@ -8,11 +13,12 @@ const getUser = (req,res) => {
     res.send(err)
   })
 }
-//---------------------------------------------------- create data
+//---------------------------------------------------- createUser(v)
 const addUser = (req,res) => {
+  let hash = bcrypt.hashSync(req.body.password, salt);
   user.create({
     username:req.body.username,
-    password:req.body.password,
+    password:hash,
     email:req.body.email
   }).then((user)=>{
     res.send(user)
@@ -20,7 +26,7 @@ const addUser = (req,res) => {
     res.send(err)
   })
 }
-//----------------------------------------------------- fine data
+//----------------------------------------------------- fine data(v)
 const findUser = (req,res) => {
   user.findById({
     _id:req.params.id
@@ -30,13 +36,14 @@ const findUser = (req,res) => {
     res.send(err)
   })
 }
-//----------------------------------------------------- edit data
+//----------------------------------------------------- edit data(v)
 const editUser = (req,res) => {
+  let hash = bcrypt.hashSync(req.body.password, salt);
   user.update({
     _id:req.params.id
   },{
     username:req.body.username,
-    password:req.body.password,
+    password:hash,
     email:req.body.email
   }).then((user)=>{
     res.send(user)
@@ -44,7 +51,7 @@ const editUser = (req,res) => {
     res.send(err)
   })
 }
-//----------------------------------------------------- delete data
+//----------------------------------------------------- delete data(v)
 const deleteUser = (req,res) => {
   user.remove({
     _id:req.params.id
@@ -54,6 +61,27 @@ const deleteUser = (req,res) => {
     res.send(err)
   })
 }
+//----------------------------------------------------- delete data(v)
+const loginUser = (req,res) => {
+  user.findOne({
+    username:req.body.username
+  })
+  .then(data => {
+    if (bcrypt.compareSync(req.body.password,data.password)) {
+      var token = jwt.sign({
+        _id:data._id,
+        username: data.username,
+        email: data.email
+      },process.env.DB_HOST);
+      res.send(token)
+    } else {
+      res.send('Fail')
+    }
+  })
+  .catch((err)=>{
+    res.send(err.message)
+  })
+}
 
 
 module.exports = {
@@ -61,5 +89,6 @@ module.exports = {
   addUser,
   findUser,
   editUser,
-  deleteUser
+  deleteUser,
+  loginUser
 }
